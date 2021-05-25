@@ -8,7 +8,7 @@ import rospy
 import task_scheduler
 
 
-# Translate to python 2 later
+# TODO: Translate to python 2 later
 
 class TopicTask(task_scheduler.Task):
     """Helper class to create and connect the task scheduler and ROS.
@@ -23,7 +23,7 @@ class TopicTask(task_scheduler.Task):
     values between the AUV's computer and the Arduino.
     """
 
-    def __init__(self, task_id: int, send_data: bool, msg_obj, ros_info: dict):
+    def __init__(self, task_id, send_data, msg_obj, ros_info):
 
         super().__init__(task_id, send_data, msg_obj)
 

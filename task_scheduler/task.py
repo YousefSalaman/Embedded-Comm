@@ -16,7 +16,7 @@ class Task(object):
       embedded device.
     """
 
-    def __init__(self, task_id: int, is_rx: bool, msg_obj, callback=None):
+    def __init__(self, task_id, is_rx, msg_obj, callback=None):
 
         self.msg = msg_obj  # Protobuf Message object
         self.is_rx = is_rx  # Tells if task is receives a request or schedules one
@@ -37,7 +37,7 @@ class Task(object):
     def alert_completion(self):
         """Alert other device the task has been completed when it was handled."""
 
-        task_scheduler.pass_completion_message(self)
+        task_scheduler.transmit_task(self)
 
     def schedule(self):
         """Schedule task to be handled by the task scheduler."""

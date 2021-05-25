@@ -26,7 +26,7 @@ _task_queue = deque()  # Queue to store the tasks
 # Task scheduler interface methods
 
 # TODO: Change to list_ports.grep instead of using _get_port
-def init(baud_rate=9600, port_search="Arduino"):
+def init(baud_rate=9600, port_search="Arduino", include_links=False):
     """Initialize task scheduler attributes at the start."""
 
     global _start_time, _SER_CH
@@ -59,12 +59,6 @@ def is_task_registered(task_id):
     return task_id in _task_holder
 
 
-def pass_completion_message(task):
-    """Passes the completion message to the tx message."""
-
-    _transmit_message(task)
-
-
 def register_task(task_id, task):
     """Register a task with the given number."""
 
@@ -87,11 +81,17 @@ def schedule_task(task):
         _task_queue.append(task)
 
 
+def transmit_task(task):
+    """Pass the contents of the task to the serial channel."""
+
+    bin_msg = task.id + task.msg.SerializePartialToString()
+    _SER_CH.write(bin_msg)
+
+
 # Rx task handling methods
 
 def _handle_incoming_message():
-    """
-    A receiver (rx) task specific method.
+    """Handle an incoming message in from the serial channel.
 
     This goes through different steps to process the incoming information
     from the rx serial channel of the rx message object and it ends this
@@ -125,33 +125,38 @@ def _route_data(task_id, msg_str):
 # Tx handling methods
 
 def _handle_current_task():
-    """
-    A transmitter (tx) task specific method.
+    """Send a task to a microcontroller.
 
-    This sends the necessary information, so the Arduino can perform a
-    certain task. It remains performing the same task until the task is
-    removed from the first spot in the task queue.
+    It sends a message with the necessary information so a task can be
+    be done on a microcontroller attached to this device. It remains
+    performing the same task until the task is removed from the first
+    spot in the task queue.
     """
 
     global _start_time, _prev_task
 
     task = _task_queue[0]  # Grab first task in task queue
-    is_prev_task = _prev_task == task  # Verify if current task was the previous one
+    is_prev_task = _prev_task == task
     reset_task_timer = time() - _start_time > _TASK_RESET_TIME
 
     if (is_prev_task and reset_task_timer) or not is_prev_task:
         if task.callback is not None:
             task.callback()
-        _transmit_message(task)
+        transmit_task(task)
         task.msg.Clear()
         if reset_task_timer:
             _start_time = time()
-        _prev_task = task  # This saves the current task for a later comparison
+        _prev_task = task
 
 
 # Serial channel methods
 
 def _extract_message():
+    """Get the message information from the incoming message.
+
+    It reads the serial channel within a time frame and if
+    it doesn't read the entire message within this time, then
+    the message gets rejected."""
 
     start = time()
 
@@ -166,14 +171,8 @@ def _extract_message():
     return task_id, proto_msg
 
 
-def _transmit_message(task):
-
-    bin_msg = task.id + task.msg.SerializePartialToString()
-    _SER_CH.write(bin_msg)
-
-
 def _get_port(port_search):
-    """Get the port for the Arduino"""
+    """Get the port for the microcontroller"""
 
     # This is the same as using list_ports.grep but this only gives you one port
     for port in list_ports.comports():
